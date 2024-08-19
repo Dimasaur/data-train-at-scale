@@ -1,9 +1,8 @@
 ============================= test session starts ==============================
-platform darwin -- Python 3.10.6, pytest-7.1.3, pluggy-1.0.0 -- /Users/dima/.pyenv/versions/3.10.6/envs/lewagon/bin/python
+platform darwin -- Python 3.10.6, pytest-8.3.2, pluggy-1.5.0 -- /Users/dima/.pyenv/versions/3.10.6/envs/taxifare-env/bin/python
 cachedir: .pytest_cache
-rootdir: /Users/dima/code/Dimasaur/07-ML-Ops/01-Train-at-scale/data-train-at-scale/tests, configfile: pytest_kitt.ini
-plugins: asyncio-0.19.0, typeguard-2.13.3, anyio-3.6.2
-asyncio: mode=strict
+rootdir: /Users/dima/code/Dimasaur/07-ML-Ops/01-Train-at-scale/data-train-at-scale/tests
+configfile: pytest_kitt.ini
 collecting ... collected 8 items
 
 tests/train_at_scale/test_clean.py::test_clean_data FAILED               [ 12%]
@@ -31,22 +30,31 @@ fixture_cleaned_1k =      fare_amount           pickup_datetime  ...  dropoff_la
 
     def test_clean_data(fixture_query_1k, fixture_cleaned_1k):
         from taxifare.ml_logic.data import clean_data
-        df_cleaned = clean_data(fixture_query_1k)
->       assert df_cleaned.shape == fixture_cleaned_1k.shape
-E       assert (455, 7) == (447, 7)
-E         At index 0 diff: 455 != 447
-E         Full diff:
-E         - (447, 7)
-E         ?   ^^
-E         + (455, 7)
-E         ?   ^^
+>       df_cleaned = clean_data(fixture_query_1k)
 
-tests/train_at_scale/test_clean.py:6: AssertionError
------------------------------ Captured stdout call -----------------------------
-✅ data cleaned
+tests/train_at_scale/test_clean.py:5: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+df =      fare_amount           pickup_datetime  ...  dropoff_latitude  passenger_count
+0            8.9 2009-01-15 09:22:3...           4
+454          8.5 2014-12-27 16:47:42+00:00  ...         40.771263                4
+
+[455 rows x 7 columns]
+
+    def clean_data(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean raw data by
+        - assigning correct dtypes to each column
+        - removing buggy or irrelevant transactions
+        """
+        # Compress raw_data by setting types to DTYPES_RAW
+>       df = df(dtypes=DTYPES_RAW)
+E       TypeError: 'DataFrame' object is not callable
+
+taxifare/ml_logic/data.py:16: TypeError
 ________________ TestMainLocal.test_route_preprocess_and_train _________________
 
-self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x129fe51b0>
+self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x138b77be0>
 
     def test_route_preprocess_and_train(self):
     
@@ -67,50 +75,246 @@ self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x129fe51b0
 
 tests/train_at_scale/test_main_local.py:36: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+taxifare/interface/main_local.py:49: in preprocess_and_train
+    data = pd.read_csv(data_query_cache_path)
+/Users/dima/.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/pandas/util/_decorators.py:211: in wrapper
+    return func(*args, **kwargs)
+/Users/dima/.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/pandas/util/_decorators.py:331: in wrapper
+    return func(*args, **kwargs)
+/Users/dima/.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/pandas/io/parsers/readers.py:950: in read_csv
+    return _read(filepath_or_buffer, kwds)
+/Users/dima/.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/pandas/io/parsers/readers.py:605: in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+/Users/dima/.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/pandas/io/parsers/readers.py:1442: in __init__
+    self._engine = self._make_engine(f, self.engine)
+/Users/dima/.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/pandas/io/parsers/readers.py:1735: in _make_engine
+    self.handles = get_handle(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-min_date = '2009-01-01', max_date = '2015-01-01'
+path_or_buf = PosixPath('/Users/dima/.lewagon/mlops/data/raw/query_2009-01-01_2015-01-01_1k.csv')
+mode = 'r'
 
-    def preprocess_and_train(min_date:str = '2009-01-01', max_date:str = '2015-01-01') -> None:
+    @doc(compression_options=_shared_docs["compression_options"] % "path_or_buf")
+    def get_handle(
+        path_or_buf: FilePath | BaseBuffer,
+        mode: str,
+        *,
+        encoding: str | None = None,
+        compression: CompressionOptions = None,
+        memory_map: bool = False,
+        is_text: bool = True,
+        errors: str | None = None,
+        storage_options: StorageOptions = None,
+    ) -> IOHandles[str] | IOHandles[bytes]:
         """
-        - Query the raw dataset from Le Wagon's BigQuery dataset
-        - Cache query result as a local CSV if it doesn't exist locally
-        - Clean and preprocess data
-        - Train a Keras model on it
-        - Save the model
-        - Compute & save a validation performance metric
+        Get file handle for given path/buffer and mode.
+    
+        Parameters
+        ----------
+        path_or_buf : str or file handle
+            File path or object.
+        mode : str
+            Mode to open path_or_buf with.
+        encoding : str or None
+            Encoding to use.
+        {compression_options}
+    
+            .. versionchanged:: 1.0.0
+               May now be a dict with key 'method' as compression mode
+               and other keys as compression options if compression
+               mode is 'zip'.
+    
+            .. versionchanged:: 1.1.0
+               Passing compression options as keys in dict is now
+               supported for compression modes 'gzip', 'bz2', 'zstd' and 'zip'.
+    
+            .. versionchanged:: 1.4.0 Zstandard support.
+    
+        memory_map : bool, default False
+            See parsers._parser_params for more information. Only used by read_csv.
+        is_text : bool, default True
+            Whether the type of the content passed to the file/buffer is string or
+            bytes. This is not the same as `"b" not in mode`. If a string content is
+            passed to a binary file/buffer, a wrapper is inserted.
+        errors : str, default 'strict'
+            Specifies how encoding and decoding errors are to be handled.
+            See the errors argument for :func:`open` for a full list
+            of options.
+        storage_options: StorageOptions = None
+            Passed to _get_filepath_or_buffer
+    
+        .. versionchanged:: 1.2.0
+    
+        Returns the dataclass IOHandles
         """
+        # Windows does not default to utf-8. Set to utf-8 for a consistent behavior
+        encoding = encoding or "utf-8"
     
-        print(Fore.MAGENTA + "\n ⭐️ Use case: preprocess_and_train" + Style.RESET_ALL)
+        errors = errors or "strict"
     
-        min_date = parse(min_date).strftime('%Y-%m-%d') # e.g '2009-01-01'
-        max_date = parse(max_date).strftime('%Y-%m-%d') # e.g '2009-01-01'
+        # read_csv does not know whether the buffer is opened in binary/text mode
+        if _is_binary_mode(path_or_buf, mode) and "b" not in mode:
+            mode += "b"
     
-        query = f"""
-            SELECT {",".join(COLUMN_NAMES_RAW)}
-            FROM `{GCP_PROJECT_WAGON}`.{BQ_DATASET}.raw_{DATA_SIZE}
-            WHERE pickup_datetime BETWEEN '{min_date}' AND '{max_date}'
-            ORDER BY pickup_datetime
-            """
+        # validate encoding and errors
+        codecs.lookup(encoding)
+        if isinstance(errors, str):
+            codecs.lookup_error(errors)
     
-        # Retrieve `query` data from BigQuery or from `data_query_cache_path` if the file already exists!
-        data_query_cache_path = Path(LOCAL_DATA_PATH).joinpath("raw", f"query_{min_date}_{max_date}_{DATA_SIZE}.csv")
-        data_query_cached_exists = data_query_cache_path.is_file()
+        # open URLs
+        ioargs = _get_filepath_or_buffer(
+            path_or_buf,
+            encoding=encoding,
+            compression=compression,
+            mode=mode,
+            storage_options=storage_options,
+        )
     
-        if data_query_cached_exists:
-            print("Loading data from local CSV...")
+        handle = ioargs.filepath_or_buffer
+        handles: list[BaseBuffer]
     
-            # YOUR CODE HERE
+        # memory mapping needs to be the first step
+        # only used for read_csv
+        handle, memory_map, handles = _maybe_memory_map(handle, memory_map)
     
-        else:
-            print("Loading data from Querying Big Query server...")
+        is_path = isinstance(handle, str)
+        compression_args = dict(ioargs.compression)
+        compression = compression_args.pop("method")
     
-            # YOUR CODE HERE
+        # Only for write methods
+        if "r" not in mode and is_path:
+            check_parent_directory(str(handle))
     
-            # Save it locally to accelerate the next queries!
->           data.to_csv(data_query_cache_path, header=True, index=False)
-E           NameError: name 'data' is not defined
+        if compression:
+            if compression != "zstd":
+                # compression libraries do not like an explicit text-mode
+                ioargs.mode = ioargs.mode.replace("t", "")
+            elif compression == "zstd" and "b" not in ioargs.mode:
+                # python-zstandard defaults to text mode, but we always expect
+                # compression libraries to use binary mode.
+                ioargs.mode += "b"
+    
+            # GZ Compression
+            if compression == "gzip":
+                if isinstance(handle, str):
+                    # error: Incompatible types in assignment (expression has type
+                    # "GzipFile", variable has type "Union[str, BaseBuffer]")
+                    handle = gzip.GzipFile(  # type: ignore[assignment]
+                        filename=handle,
+                        mode=ioargs.mode,
+                        **compression_args,
+                    )
+                else:
+                    handle = gzip.GzipFile(
+                        # No overload variant of "GzipFile" matches argument types
+                        # "Union[str, BaseBuffer]", "str", "Dict[str, Any]"
+                        fileobj=handle,  # type: ignore[call-overload]
+                        mode=ioargs.mode,
+                        **compression_args,
+                    )
+    
+            # BZ Compression
+            elif compression == "bz2":
+                # No overload variant of "BZ2File" matches argument types
+                # "Union[str, BaseBuffer]", "str", "Dict[str, Any]"
+                handle = bz2.BZ2File(  # type: ignore[call-overload]
+                    handle,
+                    mode=ioargs.mode,
+                    **compression_args,
+                )
+    
+            # ZIP Compression
+            elif compression == "zip":
+                # error: Argument 1 to "_BytesZipFile" has incompatible type
+                # "Union[str, BaseBuffer]"; expected "Union[Union[str, PathLike[str]],
+                # ReadBuffer[bytes], WriteBuffer[bytes]]"
+                handle = _BytesZipFile(
+                    handle, ioargs.mode, **compression_args  # type: ignore[arg-type]
+                )
+                if handle.buffer.mode == "r":
+                    handles.append(handle)
+                    zip_names = handle.buffer.namelist()
+                    if len(zip_names) == 1:
+                        handle = handle.buffer.open(zip_names.pop())
+                    elif not zip_names:
+                        raise ValueError(f"Zero files found in ZIP file {path_or_buf}")
+                    else:
+                        raise ValueError(
+                            "Multiple files found in ZIP file. "
+                            f"Only one file per ZIP: {zip_names}"
+                        )
+    
+            # TAR Encoding
+            elif compression == "tar":
+                compression_args.setdefault("mode", ioargs.mode)
+                if isinstance(handle, str):
+                    handle = _BytesTarFile(name=handle, **compression_args)
+                else:
+                    # error: Argument "fileobj" to "_BytesTarFile" has incompatible
+                    # type "BaseBuffer"; expected "Union[ReadBuffer[bytes],
+                    # WriteBuffer[bytes], None]"
+                    handle = _BytesTarFile(
+                        fileobj=handle, **compression_args  # type: ignore[arg-type]
+                    )
+                assert isinstance(handle, _BytesTarFile)
+                if "r" in handle.buffer.mode:
+                    handles.append(handle)
+                    files = handle.buffer.getnames()
+                    if len(files) == 1:
+                        file = handle.buffer.extractfile(files[0])
+                        assert file is not None
+                        handle = file
+                    elif not files:
+                        raise ValueError(f"Zero files found in TAR archive {path_or_buf}")
+                    else:
+                        raise ValueError(
+                            "Multiple files found in TAR archive. "
+                            f"Only one file per TAR archive: {files}"
+                        )
+    
+            # XZ Compression
+            elif compression == "xz":
+                # error: Argument 1 to "LZMAFile" has incompatible type "Union[str,
+                # BaseBuffer]"; expected "Optional[Union[Union[str, bytes, PathLike[str],
+                # PathLike[bytes]], IO[bytes]]]"
+                handle = get_lzma_file()(handle, ioargs.mode)  # type: ignore[arg-type]
+    
+            # Zstd Compression
+            elif compression == "zstd":
+                zstd = import_optional_dependency("zstandard")
+                if "r" in ioargs.mode:
+                    open_args = {"dctx": zstd.ZstdDecompressor(**compression_args)}
+                else:
+                    open_args = {"cctx": zstd.ZstdCompressor(**compression_args)}
+                handle = zstd.open(
+                    handle,
+                    mode=ioargs.mode,
+                    **open_args,
+                )
+    
+            # Unrecognized Compression
+            else:
+                msg = f"Unrecognized compression type: {compression}"
+                raise ValueError(msg)
+    
+            assert not isinstance(handle, str)
+            handles.append(handle)
+    
+        elif isinstance(handle, str):
+            # Check whether the filename is to be opened in binary mode.
+            # Binary mode does not support 'encoding' and 'newline'.
+            if ioargs.encoding and "b" not in ioargs.mode:
+                # Encoding
+>               handle = open(
+                    handle,
+                    ioargs.mode,
+                    encoding=ioargs.encoding,
+                    errors=errors,
+                    newline="",
+                )
+E               FileNotFoundError: [Errno 2] No such file or directory: '/Users/dima/.lewagon/mlops/data/raw/query_2009-01-01_2015-01-01_1k.csv'
 
-taxifare/interface/main_local.py:52: NameError
+/Users/dima/.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/pandas/io/common.py:856: FileNotFoundError
 ----------------------------- Captured stdout call -----------------------------
 [34m
 Loading TensorFlow...[0m
@@ -121,7 +325,7 @@ Loading TensorFlow...[0m
 Loading data from Querying Big Query server...
 ________________________ TestMainLocal.test_route_pred _________________________
 
-self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x129fe7c40>
+self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x138b77cd0>
 
     def test_route_pred(self):
         from taxifare.interface.main_local import pred
@@ -130,9 +334,9 @@ self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x129fe7c40
 
 tests/train_at_scale/test_main_local.py:60: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-taxifare/interface/main_local.py:105: in pred
+taxifare/interface/main_local.py:126: in pred
     X_processed = preprocess_features(X_pred)
-taxifare/ml_logic/preprocessor.py:27: in preprocess_features
+taxifare/ml_logic/preprocessor.py:35: in preprocess_features
     preprocessor = create_sklearn_preprocessor()
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
@@ -144,11 +348,18 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
         Stateless operation: "fit_transform()" equals "transform()".
         """
     
-        pass  # YOUR CODE HERE
->       return final_preprocessor
-E       NameError: name 'final_preprocessor' is not defined
+        final_preprocessor = ColumnTransformer(
+            [
+>               ("passenger_scaler", passenger_pipe, ["passenger_count"]),
+                ("time_preproc", time_pipe, ["pickup_datetime"]),
+                ("dist_preproc", distance_pipe, lonlat_features),
+                ("geohash", geohash_pipe, lonlat_features),
+            ],
+            n_jobs=-1,
+        )
+E       NameError: name 'passenger_pipe' is not defined
 
-taxifare/ml_logic/preprocessor.py:23: NameError
+taxifare/ml_logic/preprocessor.py:24: NameError
 ----------------------------- Captured stdout call -----------------------------
 [35m
  ⭐️ Use case: pred[0m
@@ -158,7 +369,7 @@ Load latest model from local registry...[0m
 Preprocessing features...[0m
 _____________________ TestMainLocal.test_route_preprocess ______________________
 
-self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x129fe7a60>
+self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x138cb0040>
 fixture_query_1k =      fare_amount           pickup_datetime  ...  dropoff_latitude  passenger_count
 0            8.9 2009-01-15 09:22:3...           4
 454          8.5 2014-12-27 16:47:42+00:00  ...         40.771263                4
@@ -177,7 +388,7 @@ E       ImportError: cannot import name 'preprocess' from 'taxifare.interface.ma
 tests/train_at_scale/test_main_local.py:67: ImportError
 ________________________ TestMainLocal.test_route_train ________________________
 
-self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x129fe7fd0>
+self = <tests.train_at_scale.test_main_local.TestMainLocal object at 0x138cb0130>
 
     def test_route_train(self):
     
@@ -199,7 +410,7 @@ tests/train_at_scale/test_main_local.py:126: ImportError
 ----------------------------- Captured stderr call -----------------------------
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  153k  100  153k    0     0  1691k      0 --:--:-- --:--:-- --:--:-- 1710k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  153k  100  153k    0     0  1432k      0 --:--:-- --:--:-- --:--:-- 1438k
 ______________________________ test_model_can_fit ______________________________
 
 fixture_processed_1k =            0    1    2    3    4    5   ...   60   61   62   63   64         65
@@ -213,25 +424,23 @@ fixture_processed_1k =            0    1    2    3    4    5   ...   60   61   6
         from taxifare.ml_logic.model import initialize_model,compile_model, train_model
         fixture_X_processed = fixture_processed_1k.to_numpy()[:,:-1]
         fixture_y = fixture_processed_1k.to_numpy()[:,-1]
->       model = initialize_model(fixture_X_processed.shape[1:])
+        model = initialize_model(fixture_X_processed.shape[1:])
+>       model = compile_model(model, learning_rate=0.001)
 
-tests/train_at_scale/test_model.py:10: 
+tests/train_at_scale/test_model.py:11: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-input_shape = (65,)
+model = <keras.engine.sequential.Sequential object at 0x2ba512ad0>
+learning_rate = 0.001
 
-    def initialize_model(input_shape: tuple) -> Model:
+    def compile_model(model: Model, learning_rate=0.0005) -> Model:
         """
-        Initialize the Neural Network with random weights
+        Compile the Neural Network
         """
-        # YOUR CODE HERE
-    
-        print("✅ Model initialized")
-    
->       return model
-E       NameError: name 'model' is not defined
+>       model.compile(loss="mean_squared_error", optimizer=optimizer, metrics=["mae"])
+E       NameError: name 'optimizer' is not defined
 
-taxifare/ml_logic/model.py:28: NameError
+taxifare/ml_logic/model.py:45: NameError
 ----------------------------- Captured stdout call -----------------------------
 ✅ Model initialized
 ___________________________ test_preprocess_features ___________________________
@@ -256,7 +465,7 @@ fixture_processed_1k =            0    1    2    3    4    5   ...   60   61   6
 
 tests/train_at_scale/test_processor_pipeline.py:8: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-taxifare/ml_logic/preprocessor.py:27: in preprocess_features
+taxifare/ml_logic/preprocessor.py:35: in preprocess_features
     preprocessor = create_sklearn_preprocessor()
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
@@ -268,20 +477,27 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
         Stateless operation: "fit_transform()" equals "transform()".
         """
     
-        pass  # YOUR CODE HERE
->       return final_preprocessor
-E       NameError: name 'final_preprocessor' is not defined
+        final_preprocessor = ColumnTransformer(
+            [
+>               ("passenger_scaler", passenger_pipe, ["passenger_count"]),
+                ("time_preproc", time_pipe, ["pickup_datetime"]),
+                ("dist_preproc", distance_pipe, lonlat_features),
+                ("geohash", geohash_pipe, lonlat_features),
+            ],
+            n_jobs=-1,
+        )
+E       NameError: name 'passenger_pipe' is not defined
 
-taxifare/ml_logic/preprocessor.py:23: NameError
+taxifare/ml_logic/preprocessor.py:24: NameError
 ----------------------------- Captured stdout call -----------------------------
 [34m
 Preprocessing features...[0m
 =========================== short test summary info ============================
-FAILED tests/train_at_scale/test_clean.py::test_clean_data - assert (455, 7) ...
+FAILED tests/train_at_scale/test_clean.py::test_clean_data - TypeError: 'Data...
 FAILED tests/train_at_scale/test_main_local.py::TestMainLocal::test_route_preprocess_and_train
 FAILED tests/train_at_scale/test_main_local.py::TestMainLocal::test_route_pred
 FAILED tests/train_at_scale/test_main_local.py::TestMainLocal::test_route_preprocess
 FAILED tests/train_at_scale/test_main_local.py::TestMainLocal::test_route_train
 FAILED tests/train_at_scale/test_model.py::test_model_can_fit - NameError: na...
 FAILED tests/train_at_scale/test_processor_pipeline.py::test_preprocess_features
-================== 7 failed, 1 passed, 100 warnings in 2.91s ===================
+================== 7 failed, 1 passed, 103 warnings in 3.89s ===================
